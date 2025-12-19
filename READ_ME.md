@@ -19,8 +19,8 @@ Nous n’avons pas l’historique réel des abonnements (start/cancel). On appro
 
 - Un client est considéré abonné si on observe **au moins N commandes consécutives** sans frais de livraison.
 - Si un run gratuit atteint ce seuil, alors **toutes** les commandes gratuites de ce run (les N premières et les suivantes) sont expliquées par l’abonnement.
-
 Le seuil N est paramétrable dans le script (par défaut N = 3).
+
 -------------------------------------------------
 Approche (logique en 3 étapes)
 Le script est découpé en 3 parties (3 tables) pour que la logique soit simple à relire et à tester.

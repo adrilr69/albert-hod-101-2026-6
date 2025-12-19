@@ -78,6 +78,6 @@ Tables attendues :
 - `enriched_synthetic_deliveroo_plus_dataset`
 
 -------------------------------------------------
-Si vous souhaitez modifier le seuil (N)
+Si vous messieurs le correcteurs souhaitez modifier le seuil (N)
 Dans le script, modifier uniquement :
         params AS (SELECT 3 AS threshold)

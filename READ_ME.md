@@ -64,7 +64,7 @@ Fichiers du repo
 - `deliveroo_plus_tests.sql` : requêtes de validation (3–5 tests simples).
 
 -------------------------------------------------
-Exécution dans BigQuery (pas à pas)
+**Exécution dans BigQuery (pas à pas)
 1. Ouvrir BigQuery et sélectionner le projet `head-of-data-2`.
 2. Ouvrir un nouvel onglet SQL.
 3. Copier-coller et exécuter `deliveroo_plus_tagging.sql` :
@@ -76,6 +76,32 @@ Tables attendues :
 - `tmp_deliveroo_orders_prepared`
 - `tmp_deliveroo_free_runs`
 - `enriched_synthetic_deliveroo_plus_dataset`
+
+-------------------------------------------------
+Exécution dans BigQuery (pas à pas)
+
+1. Ouvrir BigQuery (console GCP) et sélectionner le projet `head-of-data-2`.
+2. Dans l’explorateur à gauche, vérifier que le dataset `group_6` existe (c’est là que les tables seront écrites).
+3. Ouvrir un nouvel onglet SQL (bouton `+ SQL query`).
+4. Copier-coller le contenu de `deliveroo_plus_tagging.sql`.
+
+   - Option simple : exécuter tout le fichier d’un coup.
+   - Option “propre” : exécuter script par script dans l’ordre :
+     - SCRIPT 1/3 → crée `tmp_deliveroo_orders_prepared`
+     - SCRIPT 2/3 → crée `tmp_deliveroo_free_runs`
+     - SCRIPT 3/3 → crée `enriched_synthetic_deliveroo_plus_dataset`
+
+5. Après exécution, rafraîchir `group_6` et vérifier que les 3 tables ci-dessus existent.
+
+-------------------------------------------------
+Tests rapides (validation)
+
+1. Ouvrir un nouvel onglet SQL.
+2. Copier-coller les requêtes du fichier `deliveroo_plus_tests.sql` (idéalement une par une pour lire chaque résultat).
+3. Résultats attendus :
+   - même nombre de lignes entre source et output
+   - `bad_rows = 0` sur les tests de cohérence
+   - `bad_periods = 0` sur le test de seuil
 
 -------------------------------------------------
 Si vous messieurs le correcteurs souhaitez modifier le seuil (N)

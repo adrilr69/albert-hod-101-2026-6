@@ -1,48 +1,33 @@
 # Slack API Assignment — Head of Data 101
 
-This project was built as part of the **Head of Data 101** course at Albert School.
+This repo contains my work for the **Head of Data 101** Slack API assignment (Albert School).
 
-The objective is to interact with the **Slack Web API** using Python in order to:
-1. Post images in a Slack channel
-2. Listen to messages in real time using Socket Mode
-3. Answer Wikipedia queries automatically
-
----
-
-## Features implemented
-
-### Part 1 — Slack App setup
-- Slack App created from scratch
-- Bot user configured
-- Permissions handled via OAuth & Permissions
-- Socket Mode enabled (no public server required)
-
-### Part 2 — Image upload
-- The script automatically uploads all images located in the `images/` folder
-- Images are posted in the group channel of the project
-
-### Part 3 — Wikipedia bot
-- The bot listens to all messages in the channel
-- When a message starts with `Wikipedia:<topic>`, the bot:
-  - Queries the Wikipedia REST API
-  - Extracts the first paragraph of the article
-  - Posts the response directly in Slack
+What the bot does:
+- uploads a few images to our group channel when it starts
+- listens to messages in real time (Socket Mode)
+- replies when someone writes `Wikipedia:<topic>` by returning the first paragraph from Wikipedia
 
 ---
 
-## Technologies used
+## What I implemented
 
-- Python 3
-- Slack Bolt (Python)
-- Slack Web API
-- Socket Mode
-- Wikipedia REST API
+### Part 1 — Slack app setup
+- created a Slack app from scratch
+- enabled Socket Mode
+- added the required bot scopes and installed the app in the class workspace
+
+### Part 2 — Upload images
+- the script uploads all files found in `./images`
+- images are posted in the channel defined by `GROUP_CHANNEL_ID`
+
+### Part 3 — Wikipedia replies
+- if a message starts with `Wikipedia:`, the bot queries Wikipedia’s REST API
+- it posts the first paragraph back to Slack
 
 ---
 
-## How to run the project
+## How to run
 
-1. Install dependencies:
+1) Install dependencies:
 ```bash
 pip install -r requirements.txt
-

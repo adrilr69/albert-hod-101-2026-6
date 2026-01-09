@@ -1,4 +1,3 @@
-```markdown
 # Technical Notes & Decisions
 
 ## Why Socket Mode?

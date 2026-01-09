@@ -9,103 +9,97 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk import WebClient
 
 
-"""
-The goal is not only to make the code work,
-but also to clearly explain what is happening
-and why each step exists.
 
-"""
-
-
+# 1. Read secrets from .env
 def load_env(path=".env"):
     """
-    We load environment variables manually from a .env file.
+    Tokens should not live inside the code.
 
-    Why do this?
-    - We want to keep tokens out of the code
-    - We avoid adding extra dependencies
-    - It makes the project easier to understand
-
-    Each valid line in the .env file is injected into os.environ
-    so it can be accessed anywhere in the script.
+    We store them in a .env file to avoid pushing secrets to GitHub.
+    This function reads that file and loads the variables into os.environ,
+    so they can be accessed anywhere in the script.
     """
-    if not Path(path).exists():
-        raise FileNotFoundError(".env file not found")
+    env_file = Path(path)
+    if not env_file.exists():
+        raise FileNotFoundError("The .env file was not found at the project root.")
 
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
+    for raw_line in env_file.read_text().splitlines():
+        line = raw_line.strip()
 
-            # Ignore empty lines or comments
-            if not line or line.startswith("#"):
-                continue
+        # Skip empty lines and comments
+        if not line or line.startswith("#"):
+            continue
 
-            # Only keep valid KEY=VALUE lines
-            if "=" not in line:
-                continue
+        # Only handle KEY=VALUE lines
+        if "=" not in line:
+            continue
 
-            key, value = line.split("=", 1)
-            os.environ[key] = value
+        key, value = line.split("=", 1)
+        os.environ[key.strip()] = value.strip()
 
+
+
+# 2) Upload images on startup
 
 def upload_images(client, channel_id, images_dir):
     """
-    This function is responsible for Part 2 of the assignment.
+    Part 2 of the assignment.
 
-    When the bot starts, it:
-    - scans the images folder
-    - selects all valid image files
-    - uploads them one by one to the Slack channel
+    When the bot starts, we scan the images folder
+    and upload all valid images to the group channel.
 
-    This is done once at startup to avoid spamming the channel.
+    We do this once at startup to avoid spamming the channel.
     """
+    images_path = Path(images_dir)
+    if not images_path.exists():
+        raise FileNotFoundError(f"Images folder not found: {images_path}")
 
-    # Supported image formats
-    extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    allowed_ext = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-    # We only keep real files with valid extensions
     images = [
-        img for img in images_dir.iterdir()
-        if img.is_file() and img.suffix.lower() in extensions
+        p for p in images_path.iterdir()
+        if p.is_file() and p.suffix.lower() in allowed_ext
     ]
 
     # The assignment explicitly requires at least 3 images
     if len(images) < 3:
-        raise ValueError("At least 3 images are required")
+        raise ValueError("At least 3 images are required in the images folder.")
 
     for image in images:
         client.files_upload_v2(
             channel=channel_id,
             file=str(image),
-            title=image.name
+            title=image.name,
         )
 
-        # Small delay to respect Slack rate limits
+        # Small pause to avoid Slack rate limits
         time.sleep(0.3)
 
 
+
+# 3) Wikipedia helper function
+
 def wikipedia_first_paragraph(title):
     """
-    This function handles Part 3 of the assignment.
+    Part 3 of the assignment.
 
-    It queries Wikipedia's REST API and returns
-    the first paragraph of the requested article.
+    If a message starts with "Wikipedia:<topic>",
+    we query Wikipedia's REST API and return the first paragraph.
 
-    The User-Agent header is mandatory:
-    without it, Wikipedia may block the request.
+    One important detail we discovered during testing:
+    Wikipedia requires a proper User-Agent header.
     """
-
+    title = (title or "").strip()
     if not title:
-        return "Wikipedia title missing."
+        return "Please provide a topic after 'Wikipedia:' (example: Wikipedia:Paris)."
 
-    # Wikipedia REST endpoint for article summaries
     url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title)}"
+    headers = {"User-Agent": "AlbertSchool-HeadOfDataBot/1.0 (student project)"}
 
-    headers = {
-        "User-Agent": "AlbertSchool-HeadOfDataBot/1.0 (student project)"
-    }
-
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+    except requests.RequestException:
+        return "Wikipedia request failed (network issue). Please try again."
 
     if response.status_code == 404:
         return f"No Wikipedia page found for: {title}"
@@ -114,72 +108,59 @@ def wikipedia_first_paragraph(title):
         return f"Error fetching Wikipedia data ({response.status_code})"
 
     data = response.json()
-
-    # Wikipedia returns the full introduction in one field
     extract = data.get("extract", "")
 
-    # We only keep the first paragraph for readability
-    return extract.split("\n\n")[0]
+    # Wikipedia returns a long introduction string.
+    # We keep only the first paragraph for readability.
+    first_paragraph = extract.split("\n\n")[0].strip()
+    return first_paragraph or f"The page '{title}' exists, but no summary was available."
 
+
+# 4) Main: glue everything together
 
 def main():
     """
-    This is the main entry point of the program.
+    Main flow of the script:
 
-    The logic is intentionally simple and linear:
-    1. Load configuration
-    2. Upload images
-    3. Start listening to Slack messages
+    1) Load configuration and tokens from .env
+    2) Upload images to the group channel
+    3) Start listening to Slack messages using Socket Mode
     """
-
-    # Load environment variables (.env)
     load_env()
 
-    # Retrieve configuration values
     bot_token = os.environ["SLACK_BOT_TOKEN"]
     app_token = os.environ["SLACK_APP_TOKEN"]
     channel_id = os.environ["GROUP_CHANNEL_ID"]
-    images_dir = Path(os.environ.get("IMAGES_DIR", "./images"))
+    images_dir = os.environ.get("IMAGES_DIR", "./images")
 
-    # Slack Web API client
+    # WebClient is used for Slack Web API calls (file uploads, messages, etc.)
     client = WebClient(token=bot_token)
 
     # Part 2: upload images when the bot starts
     upload_images(client, channel_id, images_dir)
 
-    # Initialize the Slack Bolt app
+    # Slack Bolt app to handle real-time events
     app = App(token=bot_token)
 
     @app.event("message")
     def handle_message(event, say):
         """
-        This function is triggered every time a message
-        is posted in a channel where the bot is present.
+        This function runs every time a message is posted
+        in a channel where the bot is present.
 
-        We filter messages carefully to avoid:
-        - responding to bots
-        - responding to itself
+        We ignore bot messages to avoid responding to ourselves.
         """
+        text = (event.get("text") or "").strip()
 
-        text = event.get("text", "")
-
-        # Ignore bot messages (including the bot itself)
-        if event.get("bot_id") or event.get("subtype") == "bot_message":
+        if event.get("bot_id") is not None or event.get("subtype") == "bot_message":
             return
 
-        # Only react to messages following the expected format
         if text.startswith("Wikipedia:"):
-            title = text.replace("Wikipedia:", "").strip()
-            result = wikipedia_first_paragraph(title)
-            say(result)
+            title = text[len("Wikipedia:"):].strip()
+            say(wikipedia_first_paragraph(title))
 
-    """
-    Socket Mode keeps the application alive and connected
-    to Slack without exposing a public HTTP server.
-
-    This is particularly convenient in a student context
-    where local execution is preferred.
-    """
+    # Socket Mode keeps the application alive
+    # without requiring a public HTTP server.
     SocketModeHandler(app, app_token).start()
 
 
